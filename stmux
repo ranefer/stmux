@@ -1,0 +1,143 @@
+#!/usr/bin/python
+
+import sys
+import subprocess
+import xml.etree.ElementTree as ET
+import logging
+import os
+logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
+TMUX_SESSION_FILE = 'tmux.session'
+DEFAULT_TMUX_SESSION_FILE = os.path.expanduser('~/bin/') + TMUX_SESSION_FILE
+class TmuxSessionConfig:
+
+    def __init__(self, sessionName):
+        import os
+
+        if os.path.isfile(TMUX_SESSION_FILE):
+            self._root = ET.parse(TMUX_SESSION_FILE).getroot()
+        else:
+            print(DEFAULT_TMUX_SESSION_FILE)
+            self._root = ET.parse(DEFAULT_TMUX_SESSION_FILE).getroot()
+
+        badSessionName = True
+
+        for session in self._root:
+            if session.get('name') == sessionName:
+                self._session = session
+                badSessionName = False
+
+        if badSessionName:
+            logger.warning('tmux.session does not contain: \"' + sessionName + '\"')
+            logger.info('Check tmux.session for errors')
+            return None
+
+        self._defaultDir = self._session.get('directory') or os.getcwd()
+
+    def sessionName(self):
+        return self._session.get('name')
+
+    def getSessionNames(self):
+        result = []
+        for session in self._root.findall('session'):
+            result.append(session.get('name'))
+
+        return result
+
+    def getRootDirectory(self):
+        return self._defaultDir
+
+    def getWindows(self):
+        windows = []
+        for window in self._session.findall('window'):
+            windows.append(window)
+
+        return windows
+
+    def getWindowName(self, window):
+        return window.get('name')
+
+    def getWindowDirectory(self, window):
+        dir = window.get('directory') or self._defaultDir
+        return dir
+
+    def getWindowCommands(self, window):
+        commands = ""
+        for command in window.findall('command'):
+            commands += (" \; send-keys -t "
+                    + self.sessionName() + ":" + self.getWindowName(window) + " "
+                    + "'" + command.text + "'" + " Enter")
+
+        return commands
+
+class TmuxSessionManager:
+    def __init__(self, sessionConfig):
+        self.config = sessionConfig
+
+    def loadSession(self):
+        from os import system
+
+        sessionExists = self._hasSession()
+        logger.info("Session " + self.config.sessionName() + " Exists: " + str(sessionExists))
+        command = ('tmux new-session -Ad -s '
+                + self.config.sessionName()
+                + ' -n default_window -c '
+                + self.config.getRootDirectory())
+
+        if not sessionExists:
+            logger.info(command)
+            system(command)
+            self._addWindows()
+            self._removeDefault()
+
+        self._attach()
+            
+    def _addWindows(self):
+        from os import system
+        for window in self.config.getWindows():
+            command = ('tmux new-window -n '
+                    + self.config.getWindowName(window)
+                    + ' -c '
+                    + self.config.getWindowDirectory(window)
+                    + " " + self.config.getWindowCommands(window))
+            logger.info("Command: " + command)
+            system(command)
+
+    def _removeDefault(self):
+        from os import system
+        command = ('tmux kill-window -t default_window')
+        system(command)
+
+    def _attach(self):
+        import os
+        command = ('/usr/bin/tmux attach-session -t '
+                + self.config.sessionName())
+        os.system(command)
+
+    def _hasSession(self):
+        import os
+        command = ('/usr/bin/tmux has-session -t'
+                + self.config.sessionName()
+                + ' 2> /dev/null')
+
+        exitCode = os.system(command)
+        return exitCode == 0
+
+def main():
+    session = ""
+    if (len(sys.argv) != 2):
+        logger.error("Usage: " + sys.argv[0] + " tmux_session_name")
+        config = TmuxSessionConfig(session)
+        logger.info("Stored sessions are: ")
+        for session in config.getSessionNames():
+            logger.info(session)
+        exit(1)
+
+    session = sys.argv[1]
+    config = TmuxSessionConfig(session)
+    manager = TmuxSessionManager(config)
+    manager.loadSession()
+
+if __name__ == '__main__':
+    main()

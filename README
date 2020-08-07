@@ -1,0 +1,101 @@
+stmux is a simple python executable that helps create and restore tmux sessions.
+The tool can be used to create new windows and run commands
+
+If a session does not exist, it is created.
+If a session exists it is retored
+
+Configuration:
+	tmux.session is a .xml file
+	stmux expects to find the following tag structure
+	<data>
+		<session name="..." [directory="..."]>
+			<window name="..." [directory="..."]>
+				<command>...</command>
+				...
+			</window>
+			...
+		</session>
+		...
+	</data>
+
+	Commands are accurately described as keystrokes
+
+Recommended .vimrc settings:
+	map <c-l> :tabnext<CR>
+	map <c-h> :tabprevious<CR>
+
+Recommended .tmux.conf setting:
+	set -g default-terminal "xterm-256color"
+	set-window-option -g mode-keys vi
+
+	bind-key s split-window -h
+	bind-key v split-window -v
+
+Recommended tmux commands
+	Ctrl-b d --> detaches the session
+	Ctrl-b n --> next-window
+	Ctrl-b p --> presious-window
+	Ctrl-b # --> Go to # window
+
+Examples 'tmux.session':
+<?xml version="1.0"?>
+<data>
+    <session name="web" directory="/var/www/html">
+        <window name="vim">
+            <command>vim index.php</command>
+            <command>:tabe projects.php</command>
+        </window>
+        <window name="bash">
+            <command>firefox localhost</command>
+        </window>
+        <window name="help">
+        </window>
+    </session>
+
+    <session name="c" directory="Projects">
+			<window name="make" directory="Projects/dir">
+					<command>make all</command>
+			<window name="source" directory="Projects/dir/source">
+					<command>vim file.h</command>
+					<command>:tabe file.c</command>
+
+					<command>vim file1.h</command>
+					<command>:tabe file1.c</command>
+			</window>
+    </session>
+
+		<session name="django" directory="~/Projects/django/">
+			<window name="Settings" directory="~/Projects/django/django">
+				<command>source ~/.virtualenvs/django/bin/activate</command>
+				<command>vim settings.py</command>
+				<command>:tabe urls.py</command>
+			</window>
+			<window name="Url" directory="~/Projects/django/web/">
+				<command>source ~/.virtualenvs/django/bin/activate</command>
+				<command>vim urls.py</command>
+			</window>
+			<window name="Form" directory="~/Projects/django/web/forms">
+				<command>source ~/.virtualenvs/django/bin/activate</command>
+				<command>vim __init__.py</command>
+			</window>
+			<window name="Html" directory="~/Projects/django/web/">
+				<command>source ~/.virtualenvs/django/bin/activate</command>
+			</window>
+			<window name="View" directory="~/Projects/django/web/views/">
+				<command>source ~/.virtualenvs/django/bin/activate</command>
+			</window>
+			<window name="Test" directory="~/Projects/django/tests/">
+				<command>source ~/.virtualenvs/django/bin/activate</command>
+			</window>
+			<window name="Static" directory="~/Projects/django/static">
+				<command>source ~/.virtualenvs/django/bin/activate</command>
+			</window>
+			<window name="Run" directory="~/Projects/django/">
+				<command>source ~/.virtualenvs/django/bin/activate</command>
+				<command>python manage.py runserver</command>
+			</window>
+			<window name="Help" directory="~/Projects/django/">
+				<command>source ~/.virtualenvs/django/bin/activate</command>
+			</window>
+    </session>
+</data>
